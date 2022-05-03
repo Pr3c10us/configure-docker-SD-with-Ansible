@@ -1,0 +1,43 @@
+---
+
+- name: Changing docker sorage driver to overlay2
+  hosts: localhost
+  become: yes
+  tasks: 
+
+    - name: Stop docker
+      service:
+        name: docker
+        state: stopped 
+    
+    - name: Copy the contents of /var/lib/docker to a temporary location
+      copy:
+        src: /var/lib/docker
+        dest: /var/lib/docker.bk
+
+    - name: Create/check if /etc/docker/daemon.json exist
+      file:
+        path: /etc/docker/daemon.json
+        state: touch
+
+    - name: Add configuration to /etc/docker/daemon.json
+      shell: |
+        cat <<EOF > /etc/docker/daemon.json
+        {
+          "storage-driver": "overlay2"
+        }
+        EOF
+
+    - name: Start Docker
+      service:
+        name: docker
+        state: started
+
+    - name: Verify that the daemon is using the overlay2 storage driver
+      shell: docker info
+      register: docker_info
+
+    - name: Output info
+      debug:
+        var: docker_info
+
